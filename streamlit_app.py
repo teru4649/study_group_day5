@@ -15,7 +15,7 @@ def password_entered():
     st.session_state["password_correct"] = False #不一致時の処理
 
 # 既に認証済みならスキップ
-if st.session_state.get("password_correct",False):
+if st.session_state.get("password_correct", False):
   return True
 
 # パスワード入力欄を表示
