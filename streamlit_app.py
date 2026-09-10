@@ -52,5 +52,5 @@ if uploaded_file is not None:
     st.dataframe(df)
   except Exception as e:
     st.error(f"ファイルの読み込みに失敗しました:{e}")
-else
+else:
   st.info("csvファイルをアップロードすると内容が表示されます")
