@@ -48,7 +48,7 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
   try:
     df = pd.read_csv(uploaded_file)
-    st.success(f"読み込み完了:{df.shape[0]}行 × {df.shapre[1]}列")
+    st.success(f"読み込み完了:{df.shape[0]}行 × {df.shape[1]}列")
     st.dataframe(df)
   except Exception as e:
     st.error(f"ファイルの読み込みに失敗しました:{e}")
