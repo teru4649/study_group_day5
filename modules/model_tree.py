@@ -83,10 +83,10 @@ def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
     }
 
     dot = graphviz.Digraph()
-    dot.attr(rankdir="TB")  # 上から下へのツリー構造(画像と同じ向き)
+    dot.attr(rankdir="LR")  # 左から右へのツリー構造に変更
+    dot.attr(nodesep="0.4", ranksep="0.8")  # LR時は間隔を広めにすると見やすい
 
     for _, row in result_df.iterrows():
-        # ノードのラベル(名前・値・演算子を複数行で表示)
         lines = [str(row["label"])]
 
         value = row.get("calculated_value")
@@ -106,10 +106,37 @@ def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
             fillcolor="#f5f5f5",
         )
 
-    # 親子関係を線でつなぐ
     for _, row in result_df.iterrows():
         parent_id = row.get("parent_id")
         if pd.notna(parent_id) and parent_id != "":
             dot.edge(str(parent_id), str(row["node_id"]))
 
     return dot
+
+
+def render_tree_html(dot: graphviz.Digraph, height: int = 600) -> str:
+    """graphvizのDigraphを、マウスホイールでの拡大縮小・ドラッグ移動が可能なHTMLに変換する"""
+
+    svg_content = dot.pipe(format="svg").decode("utf-8")
+
+    return f"""
+    <div id="tree-container" style="width:100%; height:{height}px; border:1px solid #ddd; overflow:hidden;">
+        {svg_content}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script>
+        (function() {{
+            var svgElement = document.querySelector('#tree-container svg');
+            svgElement.style.width = '100%';
+            svgElement.style.height = '100%';
+            svgPanZoom(svgElement, {{
+                zoomEnabled: true,
+                controlIconsEnabled: true,
+                fit: true,
+                center: true,
+                minZoom: 0.2,
+                maxZoom: 10
+            }});
+        }})();
+    </script>
+    """
