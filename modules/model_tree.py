@@ -92,10 +92,11 @@ def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
         value = row.get("calculated_value")
         if pd.notna(value):
             unit = row.get("unit")
+            formatted_value = format_value(value)
             if pd.notna(unit) and unit != "":
-                lines.append(f"値: {value:,.0f} {unit}")
+                lines.append(f"値: {formatted_value} {unit}")
             else:
-                lines.append(f"値: {value:,.0f}")
+                lines.append(f"値: {formatted_value}")
 
         operator = row.get("operator")
         if pd.notna(operator) and operator != "":
@@ -144,3 +145,12 @@ def render_tree_html(dot: graphviz.Digraph, height: int = 600) -> str:
         }})();
     </script>
     """
+
+def format_value(value: float) -> str:
+    """値の大きさに応じて適切な小数桁数で文字列化する"""
+    if value == int(value):
+        return f"{value:,.0f}"  # 整数ならそのまま
+    elif abs(value) < 10:
+        return f"{value:,.2f}"  # 小さい値(比率・%など)は小数2桁
+    else:
+        return f"{value:,.1f}"  # それ以外は小数1桁
