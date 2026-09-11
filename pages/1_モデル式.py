@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from modules import model_tree
 
 st.title("モデル式(樹形図)")
@@ -29,9 +30,10 @@ try:
         result_df[["node_id", "parent_id", "label", "operator", "value", "calculated_value"]]
     )
 
-    st.subheader("樹形図")
+    st.subheader("樹形図(マウスホイールで拡大縮小、ドラッグで移動できます)")
     tree_graph = model_tree.build_tree_graph(result_df)
-    st.graphviz_chart(tree_graph, use_container_width=True)
+    tree_html = model_tree.render_tree_html(tree_graph, height=600)
+    components.html(tree_html, height=620, scrolling=True)
 
     # 後続ページ(トルネードチャート等)でも使えるよう保存
     st.session_state["result_df"] = result_df
