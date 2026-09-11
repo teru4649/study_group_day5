@@ -91,7 +91,11 @@ def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
 
         value = row.get("calculated_value")
         if pd.notna(value):
-            lines.append(f"値: {value:,.0f}")
+            unit = row.get("unit")
+            if pd.notna(unit) and unit != "":
+                lines.append(f"値: {value:,.0f} {unit}")
+            else:
+                lines.append(f"値: {value:,.0f}")
 
         operator = row.get("operator")
         if pd.notna(operator) and operator != "":
