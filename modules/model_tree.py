@@ -92,11 +92,12 @@ def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
         value = row.get("calculated_value")
         if pd.notna(value):
             unit = row.get("unit")
-            formatted_value = format_value(value)
             if pd.notna(unit) and unit != "":
+                display_value = value * 100 if unit == "%" else value
+                formatted_value = format_value(display_value)
                 lines.append(f"値: {formatted_value} {unit}")
             else:
-                lines.append(f"値: {formatted_value}")
+                lines.append(f"値: {format_value(value)}")
 
         operator = row.get("operator")
         if pd.notna(operator) and operator != "":
