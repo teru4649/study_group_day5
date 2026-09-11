@@ -39,7 +39,6 @@ st.title("感度分析・期待値計算ツール")
 
 uploaded_file = st.file_uploader(
     "分析対象のCSVファイルをアップロードしてください",
-    type=["csv"]
 )
 
 if uploaded_file is not None:
