@@ -1,5 +1,5 @@
 import pandas as pd
-
+import graphviz
 
 def find_root_id(df: pd.DataFrame) -> str:
     """parent_idが空(NaN)の行をルートノードとして特定する"""
@@ -71,3 +71,45 @@ def calc_all(df: pd.DataFrame) -> pd.DataFrame:
     result_df = df.copy()
     result_df["calculated_value"] = result_df["node_id"].map(cache)
     return result_df
+
+def build_tree_graph(result_df: pd.DataFrame) -> graphviz.Digraph:
+    """計算済みのDataFrameから、値と演算子を表示した樹形図を作成する"""
+
+    op_symbol = {
+        "add": "+",
+        "subtract": "−",
+        "multiply": "×",
+        "divide": "÷",
+    }
+
+    dot = graphviz.Digraph()
+    dot.attr(rankdir="TB")  # 上から下へのツリー構造(画像と同じ向き)
+
+    for _, row in result_df.iterrows():
+        # ノードのラベル(名前・値・演算子を複数行で表示)
+        lines = [str(row["label"])]
+
+        value = row.get("calculated_value")
+        if pd.notna(value):
+            lines.append(f"値: {value:,.0f}")
+
+        operator = row.get("operator")
+        if pd.notna(operator) and operator != "":
+            symbol = op_symbol.get(operator, operator)
+            lines.append(f"演算: {symbol}")
+
+        dot.node(
+            str(row["node_id"]),
+            label="\n".join(lines),
+            shape="box",
+            style="rounded,filled",
+            fillcolor="#f5f5f5",
+        )
+
+    # 親子関係を線でつなぐ
+    for _, row in result_df.iterrows():
+        parent_id = row.get("parent_id")
+        if pd.notna(parent_id) and parent_id != "":
+            dot.edge(str(parent_id), str(row["node_id"]))
+
+    return dot
