@@ -59,12 +59,13 @@ st.divider()
 st.subheader("ゴールシーク(収支を0にする)")
 st.caption("選んだ項目の worst_value または best_value を、収支がちょうど0になる値として逆算します。他の値は変更されません。")
 
-leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]]
-label_to_id = dict(zip(leaf_options["label"], leaf_options["node_id"]))
+leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]].copy()
+leaf_options["display"] = leaf_options["label"] + "(" + leaf_options["node_id"].astype(str) + ")"
+display_to_id = dict(zip(leaf_options["display"], leaf_options["node_id"]))
 
 col1, col2 = st.columns(2)
 with col1:
-    selected_label = st.selectbox("対象の項目", options=leaf_options["label"])
+    selected_display = st.selectbox("対象の項目", options=leaf_options["display"])
 with col2:
     target_column = st.radio("逆算する対象", options=["worst_value", "best_value"], horizontal=True)
 
