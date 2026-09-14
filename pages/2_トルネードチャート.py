@@ -5,8 +5,9 @@ from modules import tornado, model_tree
 st.title("トルネードチャート")
 
 # ---デバッグ用(原因切り分けのため一時的に追加)---
-st.write("現在のworking_df(worst_value/best_value):")
-st.write(st.session_state.get("working_df", "working_dfがまだありません")[["label", "worst_value", "best_value"]] if "working_df" in st.session_state else "未設定")
+if "working_df" in st.session_state:
+    st.write("現在のworking_df(worst_value/best_value):")
+    st.write(st.session_state["working_df"][["label", "worst_value", "best_value"]])
 # ---ここまで---
 
 if "df" not in st.session_state:
@@ -17,6 +18,8 @@ if "working_df" not in st.session_state:
     st.session_state["working_df"] = st.session_state["df"].copy()
 
 working_df = st.session_state["working_df"]
+
+editor_key = "tornado_value_editor"
 
 # ゴールシーク実行直後(rerun後)にメッセージを表示するための処理
 if "goal_seek_message" in st.session_state:
@@ -34,8 +37,6 @@ st.caption("トルネードチャートの振れ幅(worst_value / best_value)を
 
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
 editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
-
-editor_key = "tornado_value_editor"
 
 # 編集欄には、末端ノードだけを連番インデックスで渡す
 leaf_view = working_df.loc[leaf_mask, editable_columns].reset_index(drop=True)
@@ -90,7 +91,7 @@ if st.button("ゴールシークを実行"):
 
     solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
 
-        if success:
+    if success:
         working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
 
