@@ -13,83 +13,80 @@ if "df" not in st.session_state:
 working_df = st.session_state.get("working_df", st.session_state["df"])
 
 st.subheader("分布パラメータの設定")
-st.caption("各項目の distribution と param1〜3 を設定します。「自動入力してから保存」は worst_value・value・best_value から目安の値を計算し、まとめて保存します。")
+st.caption(
+    "1行につき「label,distribution,param1,param2,param3」の形式で入力してください。"
+    "distributionが不要な項目(基準値のまま固定したい項目)は、その行を削除するか空欄にしてください。"
+)
 
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
-leaf_ids = working_df.loc[leaf_mask, "node_id"].tolist()
+leaf_df = working_df.loc[leaf_mask, ["node_id", "label", "distribution", "param1", "param2", "param3"]]
 
-dist_options = ["", "normal", "triangular", "uniform"]
 
-# フォームの再構築版を管理する番号(保存・自動入力のたびに増やし、表示キャッシュを回避する)
-if "param_form_version" not in st.session_state:
-    st.session_state["param_form_version"] = 0
+def to_text_line(row) -> str:
+    dist = row["distribution"] if pd.notna(row["distribution"]) else ""
+    p1 = row["param1"] if pd.notna(row["param1"]) else ""
+    p2 = row["param2"] if pd.notna(row["param2"]) else ""
+    p3 = row["param3"] if pd.notna(row["param3"]) else ""
+    return f"{row['label']},{dist},{p1},{p2},{p3}"
 
-form_key = f"dist_param_form_v{st.session_state['param_form_version']}"
 
-with st.form(form_key):
-    new_values = {}
+default_text = "\n".join(to_text_line(row) for _, row in leaf_df.iterrows())
 
-    for node_id in leaf_ids:
-        row = working_df.loc[working_df["node_id"] == node_id].iloc[0]
-        st.markdown(f"**{row['label']}**")
+if st.button("worst_value・value・best_value から自動入力した内容を下欄に反映"):
+    lines = []
+    for _, row in leaf_df.iterrows():
+        full_row = working_df.loc[working_df["node_id"] == row["node_id"]].iloc[0]
+        if pd.notna(full_row.get("distribution")) and full_row.get("distribution") != "":
+            p1, p2, p3 = monte_carlo.auto_fill_params(full_row)
+            dist = full_row["distribution"]
+        else:
+            p1, p2, p3, dist = row["param1"], row["param2"], row["param3"], row["distribution"]
+        dist_str = dist if pd.notna(dist) else ""
+        p1_str = "" if p1 is None or pd.isna(p1) else p1
+        p2_str = "" if p2 is None or pd.isna(p2) else p2
+        p3_str = "" if p3 is None or pd.isna(p3) else p3
+        lines.append(f"{row['label']},{dist_str},{p1_str},{p2_str},{p3_str}")
+    default_text = "\n".join(lines)
+    st.session_state["param_text_prefill"] = default_text
 
-        cols = st.columns(4)
-        current_dist = row.get("distribution") if pd.notna(row.get("distribution")) else ""
-        dist_index = dist_options.index(current_dist) if current_dist in dist_options else 0
+text_value = st.session_state.get("param_text_prefill", default_text)
 
-        with cols[0]:
-            dist = st.selectbox(
-                "分布", dist_options, index=dist_index,
-                key=f"dist_{node_id}_{form_key}", label_visibility="collapsed"
-            )
-        with cols[1]:
-            p1 = st.number_input(
-                "param1", value=float(row["param1"]) if pd.notna(row.get("param1")) else 0.0,
-                key=f"p1_{node_id}_{form_key}", label_visibility="collapsed"
-            )
-        with cols[2]:
-            p2 = st.number_input(
-                "param2", value=float(row["param2"]) if pd.notna(row.get("param2")) else 0.0,
-                key=f"p2_{node_id}_{form_key}", label_visibility="collapsed"
-            )
-        with cols[3]:
-            p3 = st.number_input(
-                "param3", value=float(row["param3"]) if pd.notna(row.get("param3")) else 0.0,
-                key=f"p3_{node_id}_{form_key}", label_visibility="collapsed"
-            )
+param_text = st.text_area(
+    "分布パラメータ一覧",
+    value=text_value,
+    height=250,
+    key="param_text_area",
+)
 
-        new_values[node_id] = (dist, p1, p2, p3)
+if st.button("この内容を保存"):
+    label_to_id = dict(zip(leaf_df["label"], leaf_df["node_id"]))
+    error_lines = []
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        submitted = st.form_submit_button("この内容で設定を保存")
-    with col_b:
-        auto_fill_clicked = st.form_submit_button("worst/value/bestから自動入力してから保存")
+    for line_no, line in enumerate(param_text.strip().split("\n"), start=1):
+        if not line.strip():
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 5:
+            error_lines.append(f"{line_no}行目: カンマ区切りが5項目になっていません → {line}")
+            continue
 
-if submitted or auto_fill_clicked:
-    # まず画面上で選ばれていた内容(distributionの選択)を反映
-    for node_id, (dist, p1, p2, p3) in new_values.items():
+        label, dist, p1, p2, p3 = parts
+        if label not in label_to_id:
+            error_lines.append(f"{line_no}行目: 「{label}」という項目名がCSVに見つかりません")
+            continue
+
+        node_id = label_to_id[label]
         working_df.loc[working_df["node_id"] == node_id, "distribution"] = dist if dist != "" else np.nan
-        working_df.loc[working_df["node_id"] == node_id, "param1"] = p1
-        working_df.loc[working_df["node_id"] == node_id, "param2"] = p2
-        working_df.loc[working_df["node_id"] == node_id, "param3"] = p3
+        working_df.loc[working_df["node_id"] == node_id, "param1"] = float(p1) if p1 != "" else np.nan
+        working_df.loc[working_df["node_id"] == node_id, "param2"] = float(p2) if p2 != "" else np.nan
+        working_df.loc[working_df["node_id"] == node_id, "param3"] = float(p3) if p3 != "" else np.nan
 
-    if auto_fill_clicked:
-        # distributionが選ばれている項目だけ、param1〜3を自動計算で上書き
-        for node_id in leaf_ids:
-            row = working_df.loc[working_df["node_id"] == node_id].iloc[0]
-            if pd.notna(row.get("distribution")) and row.get("distribution") != "":
-                p1, p2, p3 = monte_carlo.auto_fill_params(row)
-                if p1 is not None:
-                    working_df.loc[working_df["node_id"] == node_id, "param1"] = p1
-                    working_df.loc[working_df["node_id"] == node_id, "param2"] = p2
-                    if p3 is not None:
-                        working_df.loc[working_df["node_id"] == node_id, "param3"] = p3
-
-    st.session_state["working_df"] = working_df
-    st.session_state["param_form_version"] += 1  # 次回はフォームを新規ウィジェットとして再構築させる
-    st.success("設定を保存しました")
-    st.rerun()
+    if error_lines:
+        st.error("以下の行でエラーがありました:\n" + "\n".join(error_lines))
+    else:
+        st.session_state["working_df"] = working_df
+        st.session_state.pop("param_text_prefill", None)
+        st.success("分布パラメータを保存しました")
 
 st.divider()
 
