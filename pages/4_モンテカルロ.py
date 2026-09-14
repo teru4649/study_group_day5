@@ -40,15 +40,21 @@ if st.button("worst_value・value・best_value から自動入力した内容を
     lines = []
     for _, row in leaf_df.iterrows():
         full_row = working_df.loc[working_df["node_id"] == row["node_id"]].iloc[0]
-        if pd.notna(full_row.get("distribution")) and full_row.get("distribution") != "":
-            p1, p2, p3 = monte_carlo.auto_fill_params(full_row)
-            dist = full_row["distribution"]
+
+        dist, p1, p2, p3 = monte_carlo.auto_fill_params(full_row)
+
+        if dist is None:
+            # worst_value/best_valueが無い項目は、元の内容のまま(基準値固定)
+            dist_str = row["distribution"] if pd.notna(row["distribution"]) else ""
+            p1_str = "" if pd.isna(row["param1"]) else row["param1"]
+            p2_str = "" if pd.isna(row["param2"]) else row["param2"]
+            p3_str = "" if pd.isna(row["param3"]) else row["param3"]
         else:
-            p1, p2, p3, dist = row["param1"], row["param2"], row["param3"], row["distribution"]
-        dist_str = dist if pd.notna(dist) else ""
-        p1_str = "" if p1 is None or pd.isna(p1) else p1
-        p2_str = "" if p2 is None or pd.isna(p2) else p2
-        p3_str = "" if p3 is None or pd.isna(p3) else p3
+            dist_str = dist
+            p1_str = p1
+            p2_str = p2
+            p3_str = "" if p3 is None else p3
+
         lines.append(f"{row['label']},{dist_str},{p1_str},{p2_str},{p3_str}")
 
     st.session_state["param_text_prefill"] = "\n".join(lines)
