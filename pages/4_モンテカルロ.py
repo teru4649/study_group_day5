@@ -119,6 +119,8 @@ st.write(
 n_trials = st.slider("試行回数", min_value=1000, max_value=50000, value=10000, step=1000)
 
 if st.button("シミュレーションを実行"):
+    st.write("【デバッグ】計算直前のworking_df:")
+    st.write(working_df.loc[leaf_mask, ["label", "distribution", "param1", "param2", "param3"]])
     results = monte_carlo.run_simulation(working_df, n_trials=n_trials)
     st.session_state["mc_results"] = results
     st.session_state["mc_n_trials"] = n_trials
