@@ -13,6 +13,14 @@ if "working_df" not in st.session_state:
 
 working_df = st.session_state["working_df"]
 
+# ゴールシーク実行直後(rerun後)にメッセージを表示するための処理
+if "goal_seek_message" in st.session_state:
+    kind, msg = st.session_state.pop("goal_seek_message")
+    if kind == "success":
+        st.success(msg)
+    else:
+        st.error(msg)
+
 # ====
 # ① 値の編集(worst_value・best_valueを編集対象に変更)
 # ====
@@ -22,11 +30,17 @@ st.caption("トルネードチャートの振れ幅(worst_value / best_value)を
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
 editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
 
+# ゴールシーク・リセットのたびに番号を増やし、編集欄を「新しいウィジェット」として扱わせる
+if "editor_version" not in st.session_state:
+    st.session_state["editor_version"] = 0
+
+editor_key = f"tornado_value_editor_v{st.session_state['editor_version']}"
+
 edited_leaf_df = st.data_editor(
     working_df.loc[leaf_mask, editable_columns],
     disabled=["node_id", "label", "unit"],
     hide_index=True,
-    key="tornado_value_editor",
+    key=editor_key,
 )
 
 working_df.loc[leaf_mask, ["worst_value", "best_value"]] = edited_leaf_df[["worst_value", "best_value"]].values
@@ -34,6 +48,7 @@ st.session_state["working_df"] = working_df
 
 if st.button("元の値にリセット", key="tornado_reset"):
     st.session_state["working_df"] = st.session_state["df"].copy()
+    st.session_state["editor_version"] += 1
     st.rerun()
 
 st.divider()
@@ -62,12 +77,20 @@ if st.button("ゴールシークを実行"):
     if success:
         working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
-        st.success(
+        st.session_state["editor_version"] += 1  # ← 編集欄を新しいウィジェットとして扱わせる
+
+        st.session_state["goal_seek_message"] = (
+            "success",
             f"「{selected_label}」の {target_column} を "
             f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
         )
     else:
-        st.error(f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした")
+        st.session_state["goal_seek_message"] = (
+            "error",
+            f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした"
+        )
+
+    st.rerun()
 
 st.divider()
 
