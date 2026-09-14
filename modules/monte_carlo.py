@@ -68,3 +68,28 @@ def run_simulation(df: pd.DataFrame, n_trials: int = 10000, seed: int = None) ->
 
     calc(root_id)
     return cache[root_id]
+
+def auto_fill_params(row: pd.Series) -> tuple:
+    """worst_value・value・best_valueから、分布ごとの標準的なparam1〜3を算出する"""
+
+    value = row.get("value")
+    worst = row.get("worst_value")
+    best = row.get("best_value")
+    dist = row.get("distribution")
+
+    if pd.isna(worst) or pd.isna(best):
+        return None, None, None
+
+    lo, hi = min(worst, best), max(worst, best)
+
+    if dist == "normal":
+        mean = value if pd.notna(value) else (lo + hi) / 2
+        std = (hi - lo) / 4  # 概ね95%区間がworst〜bestに収まる目安
+        return mean, std, None
+    elif dist == "triangular":
+        mode = value if pd.notna(value) else (lo + hi) / 2
+        return lo, mode, hi
+    elif dist == "uniform":
+        return lo, hi, None
+    else:
+        return None, None, None
