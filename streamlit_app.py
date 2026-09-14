@@ -37,6 +37,12 @@ if not check_password():
 
 st.title("感度分析・期待値計算ツール")
 
+if st.button("データを完全リセット(CSVを最初から読み込み直す)"):
+    for key in ["df", "working_df", "uploaded_file_signature"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.rerun()
+
 uploaded_file = st.file_uploader(
     "分析対象のCSVファイルをアップロードしてください",
 )
