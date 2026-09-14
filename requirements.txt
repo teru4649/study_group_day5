@@ -3,3 +3,4 @@ pandas
 graphviz
 plotly
 scipy
+numpy
