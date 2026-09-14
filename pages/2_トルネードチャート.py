@@ -80,6 +80,7 @@ if st.button("ゴールシークを実行"):
             f"「{selected_label}」の {target_column} を "
             f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
         )
+        st.write(st.session_state["working_df"][["label", "worst_value", "best_value"]])
     else:
         st.session_state["goal_seek_message"] = (
             "error",
