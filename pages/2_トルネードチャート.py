@@ -84,6 +84,11 @@ if st.button("ゴールシークを実行"):
         st.session_state["working_df"] = working_df
         st.session_state["editor_version"] += 1  # ← 編集欄を新しいウィジェットとして扱わせる
 
+        # ---デバッグ用(rerun直前の状態を確認)---
+        st.write("【rerun直前】代入直後のworking_df:")
+        st.write(working_df.loc[working_df["node_id"] == target_node_id])
+        # ---ここまで---
+
         st.session_state["goal_seek_message"] = (
             "success",
             f"「{selected_label}」の {target_column} を "
