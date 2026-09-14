@@ -1,5 +1,6 @@
 import pandas as pd
 import graphviz
+from scipy.optimize import brentq
 
 def find_root_id(df: pd.DataFrame) -> str:
     """parent_idが空(NaN)の行をルートノードとして特定する"""
@@ -155,3 +156,31 @@ def format_value(value: float) -> str:
         return f"{value:,.2f}"  # 小さい値(比率・%など)は小数2桁
     else:
         return f"{value:,.1f}"  # それ以外は小数1桁
+
+def goal_seek(df: pd.DataFrame, target_node_id: str, target_root_value: float = 0.0):
+    """target_node_idの値だけを動かし、他の値は固定したまま、
+    収支(ルート)がtarget_root_valueになるvalueを探索する"""
+
+    root_id = find_root_id(df)
+
+    def root_value_when(x: float) -> float:
+        df_temp = df.copy()
+        df_temp.loc[df_temp["node_id"] == target_node_id, "value"] = x
+        result = calc_all(df_temp)
+        return result.loc[result["node_id"] == root_id, "calculated_value"].iloc[0] - target_root_value
+
+    current_value = df.loc[df["node_id"] == target_node_id, "value"].iloc[0]
+
+    # 探索範囲を少しずつ広げながら、符号が変わる区間(解が存在する区間)を探す
+    span = max(abs(current_value), 1.0)
+    for scale in [1, 2, 5, 10, 50, 100, 1000]:
+        lo = current_value - span * scale
+        hi = current_value + span * scale
+        try:
+            if root_value_when(lo) * root_value_when(hi) < 0:
+                solution = brentq(root_value_when, lo, hi)
+                return solution, True
+        except (ValueError, ZeroDivisionError):
+            continue
+
+    return None, False  # 解が見つからなかった場合
