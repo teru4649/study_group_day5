@@ -46,6 +46,7 @@ if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
         st.session_state["df"] = df                # オリジナル(変更不可の基準値)
         st.session_state["working_df"] = df.copy()  # 編集用の作業コピー
+        st.write("⚠️ working_dfがリセットされました(この行が出るたびに要注意)")
         st.success(f"読み込み完了:{df.shape[0]}行 × {df.shape[1]}列")
         st.dataframe(df)
     except Exception as e:
