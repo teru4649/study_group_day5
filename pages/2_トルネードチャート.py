@@ -35,25 +35,36 @@ st.caption("トルネードチャートの振れ幅(worst_value / best_value)を
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
 editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
 
-# ゴールシーク・リセットのたびに番号を増やし、編集欄を「新しいウィジェット」として扱わせる
-if "editor_version" not in st.session_state:
-    st.session_state["editor_version"] = 0
+editor_key = "tornado_value_editor"
 
-editor_key = f"tornado_value_editor_v{st.session_state['editor_version']}"
+# 編集欄には、末端ノードだけを連番インデックスで渡す
+leaf_view = working_df.loc[leaf_mask, editable_columns].reset_index(drop=True)
+# 連番インデックス → working_df上の実際の行番号 の対応表
+leaf_index_map = working_df.index[leaf_mask].tolist()
 
-edited_leaf_df = st.data_editor(
-    working_df.loc[leaf_mask, editable_columns].reset_index(drop=True),
+st.data_editor(
+    leaf_view,
     disabled=["node_id", "label", "unit"],
     hide_index=True,
     key=editor_key,
 )
 
-working_df.loc[leaf_mask, ["worst_value", "best_value"]] = edited_leaf_df[["worst_value", "best_value"]].values
-st.session_state["working_df"] = working_df
+# 実際に編集操作があった行・列だけをworking_dfに書き戻す
+editor_state = st.session_state.get(editor_key, {})
+edited_rows = editor_state.get("edited_rows", {})
+
+if edited_rows:
+    for row_position, changes in edited_rows.items():
+        actual_index = leaf_index_map[int(row_position)]
+        for column_name, new_value in changes.items():
+            if column_name in ["worst_value", "best_value"]:
+                working_df.loc[actual_index, column_name] = new_value
+    st.session_state["working_df"] = working_df
 
 if st.button("元の値にリセット", key="tornado_reset"):
     st.session_state["working_df"] = st.session_state["df"].copy()
-    st.session_state["editor_version"] += 1
+    if editor_key in st.session_state:
+        del st.session_state[editor_key]
     st.rerun()
 
 st.divider()
@@ -79,15 +90,13 @@ if st.button("ゴールシークを実行"):
 
     solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
 
-    if success:
+        if success:
         working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
-        st.session_state["editor_version"] += 1  # ← 編集欄を新しいウィジェットとして扱わせる
 
-        # ---デバッグ用(rerun直前の状態を確認)---
-        st.write("【rerun直前】代入直後のworking_df:")
-        st.write(working_df.loc[working_df["node_id"] == target_node_id])
-        # ---ここまで---
+        # 編集欄が持っている古い差分情報を消す(これが残っていると次回上書きされるため)
+        if editor_key in st.session_state:
+            del st.session_state[editor_key]
 
         st.session_state["goal_seek_message"] = (
             "success",
