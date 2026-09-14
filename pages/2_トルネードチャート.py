@@ -30,11 +30,17 @@ st.caption("トルネードチャートの振れ幅(worst_value / best_value)を
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
 editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
 
+# ゴールシークのたびに番号を増やし、常に新しいウィジェットとして扱わせる
+if "editor_version" not in st.session_state:
+    st.session_state["editor_version"] = 0
+
+editor_key = f"tornado_value_editor_v{st.session_state['editor_version']}"
+
 edited_leaf_df = st.data_editor(
     working_df.loc[leaf_mask, editable_columns],
     disabled=["node_id", "label", "unit"],
     hide_index=True,
-    key="tornado_value_editor",
+    key=editor_key,
 )
 
 working_df.loc[leaf_mask, ["worst_value", "best_value"]] = edited_leaf_df[["worst_value", "best_value"]].values
@@ -42,6 +48,7 @@ st.session_state["working_df"] = working_df
 
 if st.button("元の値にリセット", key="tornado_reset"):
     st.session_state["working_df"] = st.session_state["df"].copy()
+    st.session_state["editor_version"] += 1  # リセット時も新しいウィジェットとして扱う
     st.rerun()
 
 st.divider()
@@ -62,7 +69,7 @@ with col2:
     target_column = st.radio("逆算する対象", options=["worst_value", "best_value"], horizontal=True)
 
 if st.button("ゴールシークを実行"):
-    target_node_id = label_to_id[selected_label]
+    target_node_id = display_to_id[selected_display]
     before_value = working_df.loc[working_df["node_id"] == target_node_id, target_column].iloc[0]
 
     solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
@@ -70,21 +77,17 @@ if st.button("ゴールシークを実行"):
     if success:
         working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
-
-        # 編集欄(data_editor)の内部状態をリセットし、最新のworking_dfを反映させる
-        if "tornado_value_editor" in st.session_state:
-            del st.session_state["tornado_value_editor"]
+        st.session_state["editor_version"] += 1  # ← ここを変更(del の代わり)
 
         st.session_state["goal_seek_message"] = (
             "success",
-            f"「{selected_label}」の {target_column} を "
+            f"「{selected_display}」の {target_column} を "
             f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
         )
-        st.write(st.session_state["working_df"][["label", "worst_value", "best_value"]])
     else:
         st.session_state["goal_seek_message"] = (
             "error",
-            f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした"
+            f"「{selected_display}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした"
         )
 
     st.rerun()
