@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-from modules import tornado
+from modules import tornado, model_tree
 
 st.title("トルネードチャート")
 
@@ -8,10 +8,65 @@ if "df" not in st.session_state:
     st.warning("トップページでCSVファイルをアップロードしてください")
     st.stop()
 
-# 「モデル式」ページで値を編集していれば、その編集後の値を使う
-df = st.session_state.get("working_df", st.session_state["df"])
+if "working_df" not in st.session_state:
+    st.session_state["working_df"] = st.session_state["df"].copy()
 
-tornado_df, base_value = tornado.calc_tornado_data(df)
+working_df = st.session_state["working_df"]
+
+# ====
+# ① 値の編集(モデル式ページと同じ working_df を編集)
+# ====
+st.subheader("値の編集")
+st.caption("末端の項目のみ値を変更できます。変更内容は他のページにも反映されます。")
+
+leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
+editable_columns = ["node_id", "label", "value", "unit"]
+
+edited_leaf_df = st.data_editor(
+    working_df.loc[leaf_mask, editable_columns],
+    disabled=["node_id", "label", "unit"],
+    hide_index=True,
+    key="tornado_value_editor",
+)
+
+working_df.loc[leaf_mask, "value"] = edited_leaf_df["value"].values
+st.session_state["working_df"] = working_df
+
+if st.button("元の値にリセット", key="tornado_reset"):
+    st.session_state["working_df"] = st.session_state["df"].copy()
+    st.rerun()
+
+st.divider()
+
+# ====
+# ② ゴールシーク(収支が0になるよう、指定した項目だけを自動調整)
+# ====
+st.subheader("ゴールシーク(収支を0にする)")
+st.caption("選んだ項目だけを動かして、収支がちょうど0になる値を自動探索します。他の項目は変更されません。")
+
+leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]]
+label_to_id = dict(zip(leaf_options["label"], leaf_options["node_id"]))
+
+selected_label = st.selectbox("収支を0にするために動かす項目", options=leaf_options["label"])
+
+if st.button("ゴールシークを実行"):
+    target_node_id = label_to_id[selected_label]
+    solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
+
+    if success:
+        working_df.loc[working_df["node_id"] == target_node_id, "value"] = solution
+        st.session_state["working_df"] = working_df
+        st.success(f"「{selected_label}」を {solution:,.2f} に変更すると、収支が0になります")
+        st.rerun()
+    else:
+        st.error(f"「{selected_label}」だけを動かしても、収支を0にできる値が見つかりませんでした")
+
+st.divider()
+
+# ====
+# トルネードチャート本体
+# ====
+tornado_df, base_value = tornado.calc_tornado_data(working_df)
 
 if len(tornado_df) == 0:
     st.warning("CSVに worst_value / best_value が設定されている末端項目がありません")
