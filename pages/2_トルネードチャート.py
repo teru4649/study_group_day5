@@ -13,85 +13,53 @@ if "working_df" not in st.session_state:
 
 working_df = st.session_state["working_df"]
 
-# ゴールシーク実行直後(rerun後)にメッセージを表示するための処理
-if "goal_seek_message" in st.session_state:
-    kind, msg = st.session_state.pop("goal_seek_message")
-    if kind == "success":
-        st.success(msg)
-    else:
-        st.error(msg)
-
 # ====
-# ① 値の編集(worst_value・best_valueを編集対象に変更)
+# ① 値の編集(モデル式ページと同じ working_df を編集)
 # ====
 st.subheader("値の編集")
-st.caption("トルネードチャートの振れ幅(worst_value / best_value)を編集できます。")
+st.caption("末端の項目のみ値を変更できます。変更内容は他のページにも反映されます。")
 
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
-editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
-
-# ゴールシークのたびに番号を増やし、常に新しいウィジェットとして扱わせる
-if "editor_version" not in st.session_state:
-    st.session_state["editor_version"] = 0
-
-editor_key = f"tornado_value_editor_v{st.session_state['editor_version']}"
+editable_columns = ["node_id", "label", "value", "unit"]
 
 edited_leaf_df = st.data_editor(
     working_df.loc[leaf_mask, editable_columns],
     disabled=["node_id", "label", "unit"],
     hide_index=True,
-    key=editor_key,
+    key="tornado_value_editor",
 )
 
-working_df.loc[leaf_mask, ["worst_value", "best_value"]] = edited_leaf_df[["worst_value", "best_value"]].values
+working_df.loc[leaf_mask, "value"] = edited_leaf_df["value"].values
 st.session_state["working_df"] = working_df
 
 if st.button("元の値にリセット", key="tornado_reset"):
     st.session_state["working_df"] = st.session_state["df"].copy()
-    st.session_state["editor_version"] += 1  # リセット時も新しいウィジェットとして扱う
     st.rerun()
 
 st.divider()
 
 # ====
-# ② ゴールシーク(収支を0にするworst_value/best_valueを逆算)
+# ② ゴールシーク(収支が0になるよう、指定した項目だけを自動調整)
 # ====
 st.subheader("ゴールシーク(収支を0にする)")
-st.caption("選んだ項目の worst_value または best_value を、収支がちょうど0になる値として逆算します。他の値は変更されません。")
+st.caption("選んだ項目だけを動かして、収支がちょうど0になる値を自動探索します。他の項目は変更されません。")
 
-leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]].copy()
-leaf_options["display"] = leaf_options["label"] + "(" + leaf_options["node_id"].astype(str) + ")"
-display_to_id = dict(zip(leaf_options["display"], leaf_options["node_id"]))
+leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]]
+label_to_id = dict(zip(leaf_options["label"], leaf_options["node_id"]))
 
-col1, col2 = st.columns(2)
-with col1:
-    selected_display = st.selectbox("対象の項目", options=leaf_options["display"])
-with col2:
-    target_column = st.radio("逆算する対象", options=["worst_value", "best_value"], horizontal=True)
+selected_label = st.selectbox("収支を0にするために動かす項目", options=leaf_options["label"])
 
 if st.button("ゴールシークを実行"):
-    target_node_id = display_to_id[selected_display]
-    before_value = working_df.loc[working_df["node_id"] == target_node_id, target_column].iloc[0]
-
+    target_node_id = label_to_id[selected_label]
     solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
 
     if success:
-        working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
+        working_df.loc[working_df["node_id"] == target_node_id, "value"] = solution
         st.session_state["working_df"] = working_df
-        st.session_state["editor_version"] += 1  # ← ここを変更(del の代わり)
-
-        st.session_state["goal_seek_message"] = (
-            "success",
-            f"「{selected_display}」の {target_column} を "
-            f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
-        )
+        st.success(f"「{selected_label}」を {solution:,.2f} に変更すると、収支が0になります")
+        st.rerun()
     else:
-        st.session_state["goal_seek_message"] = (
-            "error",
-            f"「{selected_display}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした"
-        )
-
-    st.rerun()
+        st.error(f"「{selected_label}」だけを動かしても、収支を0にできる値が見つかりませんでした")
 
 st.divider()
 
