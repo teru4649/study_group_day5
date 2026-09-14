@@ -12,6 +12,75 @@ if "df" not in st.session_state:
 
 working_df = st.session_state.get("working_df", st.session_state["df"])
 
+st.subheader("分布パラメータの設定")
+st.caption("各項目の distribution と param1〜3 を設定します。「自動入力」は worst_value・value・best_value から目安の値を計算します。")
+
+leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
+leaf_ids = working_df.loc[leaf_mask, "node_id"].tolist()
+
+dist_options = ["", "normal", "triangular", "uniform"]
+
+with st.form("dist_param_form"):
+    new_values = {}
+
+    for node_id in leaf_ids:
+        row = working_df.loc[working_df["node_id"] == node_id].iloc[0]
+        st.markdown(f"**{row['label']}**")
+
+        cols = st.columns(4)
+        current_dist = row.get("distribution") if pd.notna(row.get("distribution")) else ""
+        dist_index = dist_options.index(current_dist) if current_dist in dist_options else 0
+
+        with cols[0]:
+            dist = st.selectbox(
+                "分布", dist_options, index=dist_index,
+                key=f"dist_{node_id}", label_visibility="collapsed"
+            )
+        with cols[1]:
+            p1 = st.number_input(
+                "param1", value=float(row["param1"]) if pd.notna(row.get("param1")) else 0.0,
+                key=f"p1_{node_id}", label_visibility="collapsed"
+            )
+        with cols[2]:
+            p2 = st.number_input(
+                "param2", value=float(row["param2"]) if pd.notna(row.get("param2")) else 0.0,
+                key=f"p2_{node_id}", label_visibility="collapsed"
+            )
+        with cols[3]:
+            p3 = st.number_input(
+                "param3", value=float(row["param3"]) if pd.notna(row.get("param3")) else 0.0,
+                key=f"p3_{node_id}", label_visibility="collapsed"
+            )
+
+        new_values[node_id] = (dist, p1, p2, p3)
+
+    submitted = st.form_submit_button("この内容で設定を保存")
+
+if submitted:
+    for node_id, (dist, p1, p2, p3) in new_values.items():
+        working_df.loc[working_df["node_id"] == node_id, "distribution"] = dist if dist != "" else np.nan
+        working_df.loc[working_df["node_id"] == node_id, "param1"] = p1
+        working_df.loc[working_df["node_id"] == node_id, "param2"] = p2
+        working_df.loc[working_df["node_id"] == node_id, "param3"] = p3
+    st.session_state["working_df"] = working_df
+    st.success("分布パラメータを保存しました")
+
+if st.button("worst_value・value・best_value から自動入力"):
+    for node_id in leaf_ids:
+        row = working_df.loc[working_df["node_id"] == node_id].iloc[0]
+        if pd.notna(row.get("distribution")) and row.get("distribution") != "":
+            p1, p2, p3 = monte_carlo.auto_fill_params(row)
+            if p1 is not None:
+                working_df.loc[working_df["node_id"] == node_id, "param1"] = p1
+                working_df.loc[working_df["node_id"] == node_id, "param2"] = p2
+                if p3 is not None:
+                    working_df.loc[working_df["node_id"] == node_id, "param3"] = p3
+    st.session_state["working_df"] = working_df
+    st.success("自動入力しました。内容を確認の上「この内容で設定を保存」を押してください")
+    st.rerun()
+
+st.divider()
+
 n_trials = st.slider("試行回数", min_value=1000, max_value=50000, value=10000, step=1000)
 
 if st.button("シミュレーションを実行"):
