@@ -39,27 +39,35 @@ if st.button("元の値にリセット", key="tornado_reset"):
 st.divider()
 
 # ====
-# ② ゴールシーク(収支が0になるよう、指定した項目だけを自動調整)
+# ② ゴールシーク(収支を0にするworst_value/best_valueを逆算)
 # ====
 st.subheader("ゴールシーク(収支を0にする)")
-st.caption("選んだ項目だけを動かして、収支がちょうど0になる値を自動探索します。他の項目は変更されません。")
+st.caption("選んだ項目の worst_value または best_value を、収支がちょうど0になる値として逆算します。他の値は変更されません。")
 
 leaf_options = working_df.loc[leaf_mask, ["node_id", "label"]]
 label_to_id = dict(zip(leaf_options["label"], leaf_options["node_id"]))
 
-selected_label = st.selectbox("収支を0にするために動かす項目", options=leaf_options["label"])
+col1, col2 = st.columns(2)
+with col1:
+    selected_label = st.selectbox("対象の項目", options=leaf_options["label"])
+with col2:
+    target_column = st.radio("逆算する対象", options=["worst_value", "best_value"], horizontal=True)
 
 if st.button("ゴールシークを実行"):
     target_node_id = label_to_id[selected_label]
+    before_value = working_df.loc[working_df["node_id"] == target_node_id, target_column].iloc[0]
+
     solution, success = model_tree.goal_seek(working_df, target_node_id, target_root_value=0.0)
 
     if success:
-        working_df.loc[working_df["node_id"] == target_node_id, "value"] = solution
+        working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
-        st.success(f"「{selected_label}」を {solution:,.2f} に変更すると、収支が0になります")
-        st.rerun()
+        st.success(
+            f"「{selected_label}」の {target_column} を "
+            f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
+        )
     else:
-        st.error(f"「{selected_label}」だけを動かしても、収支を0にできる値が見つかりませんでした")
+        st.error(f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした")
 
 st.divider()
 
