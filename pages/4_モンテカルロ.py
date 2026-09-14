@@ -90,8 +90,6 @@ if st.button("この内容を保存"):
 
 st.divider()
 
-n_trials = st.slider("試行回数", min_value=1000, max_value=50000, value=10000, step=1000)
-
 st.write("シミュレーション実行直前の distribution / param1〜3:")
 st.write(working_df.loc[leaf_mask, ["label", "distribution", "param1", "param2", "param3"]])
 
