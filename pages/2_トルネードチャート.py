@@ -4,12 +4,6 @@ from modules import tornado, model_tree
 
 st.title("トルネードチャート")
 
-# ---デバッグ用(原因切り分けのため一時的に追加)---
-if "working_df" in st.session_state:
-    st.write("現在のworking_df(worst_value/best_value):")
-    st.write(st.session_state["working_df"][["label", "worst_value", "best_value"]])
-# ---ここまで---
-
 if "df" not in st.session_state:
     st.warning("トップページでCSVファイルをアップロードしてください")
     st.stop()
