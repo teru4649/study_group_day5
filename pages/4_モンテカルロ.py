@@ -32,6 +32,9 @@ def to_text_line(row) -> str:
 
 default_text = "\n".join(to_text_line(row) for _, row in leaf_df.iterrows())
 
+if "param_text_version" not in st.session_state:
+    st.session_state["param_text_version"] = 0
+
 if st.button("worst_value・value・best_value から自動入力した内容を下欄に反映"):
     lines = []
     for _, row in leaf_df.iterrows():
@@ -46,16 +49,18 @@ if st.button("worst_value・value・best_value から自動入力した内容を
         p2_str = "" if p2 is None or pd.isna(p2) else p2
         p3_str = "" if p3 is None or pd.isna(p3) else p3
         lines.append(f"{row['label']},{dist_str},{p1_str},{p2_str},{p3_str}")
-    default_text = "\n".join(lines)
-    st.session_state["param_text_prefill"] = default_text
+    st.session_state["param_text_prefill"] = "\n".join(lines)
+    st.session_state["param_text_version"] += 1  # ← 新しいウィジェットとして扱わせる
+    st.rerun()
 
 text_value = st.session_state.get("param_text_prefill", default_text)
+text_area_key = f"param_text_area_v{st.session_state['param_text_version']}"
 
 param_text = st.text_area(
     "分布パラメータ一覧",
     value=text_value,
     height=250,
-    key="param_text_area",
+    key=text_area_key,
 )
 
 if st.button("この内容を保存"):
