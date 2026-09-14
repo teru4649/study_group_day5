@@ -42,15 +42,21 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    try:
-        df = pd.read_csv(uploaded_file)
-        st.session_state["df"] = df                # オリジナル(変更不可の基準値)
-        st.session_state["working_df"] = df.copy()  # 編集用の作業コピー
-        st.write("⚠️ working_dfがリセットされました(この行が出るたびに要注意)")
-        st.success(f"読み込み完了:{df.shape[0]}行 × {df.shape[1]}列")
-        st.dataframe(df)
-    except Exception as e:
-        st.error(f"ファイルの読み込みに失敗しました:{e}")
+    # 同じファイルが既に読み込み済みかどうかを、ファイル名とサイズで判定する
+    file_signature = (uploaded_file.name, uploaded_file.size)
+
+    if st.session_state.get("uploaded_file_signature") != file_signature:
+        try:
+            df = pd.read_csv(uploaded_file)
+            st.session_state["df"] = df                 # オリジナル(変更不可の基準値)
+            st.session_state["working_df"] = df.copy()   # 編集用の作業コピー
+            st.session_state["uploaded_file_signature"] = file_signature
+            st.success(f"読み込み完了:{df.shape[0]}行 × {df.shape[1]}列")
+        except Exception as e:
+            st.error(f"ファイルの読み込みに失敗しました:{e}")
+
+    if "df" in st.session_state:
+        st.dataframe(st.session_state["df"])
 elif "df" not in st.session_state:
     st.info("csvファイルをアップロードすると内容が表示されます")
 
