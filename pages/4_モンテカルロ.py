@@ -32,6 +32,7 @@ def to_text_line(row) -> str:
 
 default_text = "\n".join(to_text_line(row) for _, row in leaf_df.iterrows())
 
+# テキスト欄を「新しいウィジェット」として作り直すための番号
 if "param_text_version" not in st.session_state:
     st.session_state["param_text_version"] = 0
 
@@ -49,8 +50,9 @@ if st.button("worst_value・value・best_value から自動入力した内容を
         p2_str = "" if p2 is None or pd.isna(p2) else p2
         p3_str = "" if p3 is None or pd.isna(p3) else p3
         lines.append(f"{row['label']},{dist_str},{p1_str},{p2_str},{p3_str}")
+
     st.session_state["param_text_prefill"] = "\n".join(lines)
-    st.session_state["param_text_version"] += 1  # ← 新しいウィジェットとして扱わせる
+    st.session_state["param_text_version"] += 1
     st.rerun()
 
 text_value = st.session_state.get("param_text_prefill", default_text)
@@ -91,7 +93,9 @@ if st.button("この内容を保存"):
     else:
         st.session_state["working_df"] = working_df
         st.session_state.pop("param_text_prefill", None)
+        st.session_state["param_text_version"] += 1  # 保存後も新しいウィジェットとして再表示させる
         st.success("分布パラメータを保存しました")
+        st.rerun()
 
 st.divider()
 
@@ -108,18 +112,12 @@ if st.button("シミュレーションを実行"):
 if "mc_results" in st.session_state:
     results = st.session_state["mc_results"]
 
-    # ====
-    # ヒストグラム
-    # ====
     st.subheader("収支の分布(ヒストグラム)")
     fig_hist = go.Figure(data=[go.Histogram(x=results, nbinsx=50, marker_color="#4C78A8")])
     fig_hist.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="収支=0")
     fig_hist.update_layout(xaxis_title="収支", yaxis_title="回数", height=400)
     st.plotly_chart(fig_hist, use_container_width=True)
 
-    # ====
-    # 累積確率曲線
-    # ====
     st.subheader("累積確率曲線")
     sorted_results = np.sort(results)
     cum_prob = np.arange(1, len(sorted_results) + 1) / len(sorted_results)
@@ -136,9 +134,6 @@ if "mc_results" in st.session_state:
     prob_negative = (results < 0).mean()
     st.metric("収支が赤字(0未満)になる確率", f"{prob_negative * 100:.1f}%")
 
-    # ====
-    # 主要パーセンタイル表
-    # ====
     st.subheader("主要パーセンタイル")
     percentiles = [5, 10, 25, 50, 75, 90, 95]
     percentile_values = np.percentile(results, percentiles)
