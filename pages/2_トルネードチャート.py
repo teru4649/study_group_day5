@@ -14,13 +14,13 @@ if "working_df" not in st.session_state:
 working_df = st.session_state["working_df"]
 
 # ====
-# ① 値の編集(モデル式ページと同じ working_df を編集)
+# ① 値の編集(worst_value・best_valueを編集対象に変更)
 # ====
 st.subheader("値の編集")
-st.caption("末端の項目のみ値を変更できます。変更内容は他のページにも反映されます。")
+st.caption("トルネードチャートの振れ幅(worst_value / best_value)を編集できます。")
 
 leaf_mask = working_df["operator"].isna() | (working_df["operator"] == "")
-editable_columns = ["node_id", "label", "value", "unit"]
+editable_columns = ["node_id", "label", "worst_value", "best_value", "unit"]
 
 edited_leaf_df = st.data_editor(
     working_df.loc[leaf_mask, editable_columns],
@@ -29,7 +29,7 @@ edited_leaf_df = st.data_editor(
     key="tornado_value_editor",
 )
 
-working_df.loc[leaf_mask, "value"] = edited_leaf_df["value"].values
+working_df.loc[leaf_mask, ["worst_value", "best_value"]] = edited_leaf_df[["worst_value", "best_value"]].values
 st.session_state["working_df"] = working_df
 
 if st.button("元の値にリセット", key="tornado_reset"):
