@@ -57,8 +57,12 @@ if st.button("worst_value・value・best_value から自動入力した内容を
         lines.append(f"{row['label']},{dist_str},{p1_str},{p2_str},{p3_str}")
 
     st.session_state["param_text_prefill"] = "\n".join(lines)
+
+    st.write("【デバッグ】生成されたlines:")
+    st.write(lines)
+
     st.session_state["param_text_version"] += 1
-    st.rerun()
+    # st.rerun()  # ← 一時的にコメントアウト(デバッグ表示を確認するため)
 
 text_value = st.session_state.get("param_text_prefill", default_text)
 text_area_key = f"param_text_area_v{st.session_state['param_text_version']}"
