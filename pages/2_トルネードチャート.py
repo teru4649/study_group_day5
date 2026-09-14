@@ -13,6 +13,14 @@ if "working_df" not in st.session_state:
 
 working_df = st.session_state["working_df"]
 
+# ゴールシーク実行直後(rerun後)にメッセージを表示するための処理
+if "goal_seek_message" in st.session_state:
+    kind, msg = st.session_state.pop("goal_seek_message")
+    if kind == "success":
+        st.success(msg)
+    else:
+        st.error(msg)
+
 # ====
 # ① 値の編集(worst_value・best_valueを編集対象に変更)
 # ====
@@ -62,12 +70,23 @@ if st.button("ゴールシークを実行"):
     if success:
         working_df.loc[working_df["node_id"] == target_node_id, target_column] = solution
         st.session_state["working_df"] = working_df
-        st.success(
+
+        # 編集欄(data_editor)の内部状態をリセットし、最新のworking_dfを反映させる
+        if "tornado_value_editor" in st.session_state:
+            del st.session_state["tornado_value_editor"]
+
+        st.session_state["goal_seek_message"] = (
+            "success",
             f"「{selected_label}」の {target_column} を "
             f"{before_value:,.2f} → {solution:,.2f} に変更すると、収支が0になります"
         )
     else:
-        st.error(f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした")
+        st.session_state["goal_seek_message"] = (
+            "error",
+            f"「{selected_label}」の {target_column} だけを動かしても、収支を0にできる値が見つかりませんでした"
+        )
+
+    st.rerun()
 
 st.divider()
 
