@@ -37,7 +37,7 @@ if "editor_version" not in st.session_state:
 editor_key = f"tornado_value_editor_v{st.session_state['editor_version']}"
 
 edited_leaf_df = st.data_editor(
-    working_df.loc[leaf_mask, editable_columns],
+    working_df.loc[leaf_mask, editable_columns].reset_index(drop=True),
     disabled=["node_id", "label", "unit"],
     hide_index=True,
     key=editor_key,
