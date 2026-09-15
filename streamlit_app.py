@@ -69,7 +69,7 @@ elif "df" not in st.session_state:
 # ====
 # ページ定義・ナビゲーション
 # ====
-
+manual_page = st.Page("pages/0_使い方.py", title="使い方", icon=":material/menu_book:")
 model_tree_page = st.Page("pages/1_モデル式.py", title="モデル式", icon=":material/schema:")
 tornado_page = st.Page("pages/2_トルネードチャート.py", title="トルネードチャート", icon=":material/bar_chart:")
 sensitivity_page = st.Page("pages/3_感度分析.py", title="感度分析", icon=":material/tune:")
@@ -77,6 +77,7 @@ monte_carlo_page = st.Page("pages/4_モンテカルロ.py", title="モンテカ�
 breakeven_page = st.Page("pages/5_損益分岐点分析.py", title="損益分岐点分析", icon=":material/trending_up:")
 
 pg = st.navigation([
+    manual_page, 
     model_tree_page,
     tornado_page,
     sensitivity_page,
