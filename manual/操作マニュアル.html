@@ -1,1 +1,754 @@
-
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>感度分析・期待値計算ツール 操作マニュアル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F6F7F9;
+    --surface: #FFFFFF;
+    --ink: #1C2430;
+    --ink-soft: #5B6472;
+    --line: #E2E6EB;
+    --accent: #33628F;
+    --accent-soft: #E8EFF5;
+    --accent-deep: #21486B;
+    --warn: #B5432D;
+    --warn-soft: #FBECE8;
+    --good: #2E6B4F;
+    --good-soft: #E8F2ED;
+    --code-bg: #10233A;
+    --code-ink: #D9E6F2;
+    --radius: 3px;
+  }
+ 
+  * { box-sizing: border-box; }
+ 
+  html { scroll-behavior: smooth; }
+ 
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans JP", -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    font-size: 15.5px;
+    line-height: 1.85;
+  }
+ 
+  a { color: var(--accent-deep); }
+  a:focus, button:focus, summary:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+ 
+  h1, h2, h3, .brand {
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+ 
+  code, .mono {
+    font-family: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+    font-size: 0.88em;
+  }
+ 
+  /* ---------- Layout shell ---------- */
+  .shell{
+    display: grid;
+    grid-template-columns: 268px 1fr;
+    max-width: 1240px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+ 
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    border-right: 1px solid var(--line);
+    padding: 36px 22px 40px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand{
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin: 0 0 4px;
+  }
+  .brand-sub{
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    margin: 0 0 28px;
+  }
+  .nav-group{ margin-bottom: 22px; }
+  .nav-group-label{
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+    padding-left: 2px;
+  }
+  .nav-list{ list-style: none; margin: 0; padding: 0; }
+  .nav-list a{
+    display: block;
+    padding: 6px 10px;
+    margin: 1px 0;
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 0.86rem;
+    border-left: 2px solid transparent;
+  }
+  .nav-list a:hover{ background: var(--accent-soft); border-left-color: var(--accent); }
+  .nav-num{ color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 0.78em; margin-right: 6px; }
+ 
+  .sidebar-footer{
+    margin-top: 30px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+  }
+  .app-link{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--accent-deep);
+    color: #fff !important;
+    border-radius: var(--radius);
+    text-decoration: none;
+    font-size: 0.8rem;
+  }
+  .app-link:hover{ background: var(--accent); }
+ 
+  /* ---------- Main ---------- */
+  main{ padding: 48px 64px 100px; max-width: 860px; }
+ 
+  .doc-header{ margin-bottom: 46px; }
+  .doc-eyebrow{
+    color: var(--accent);
+    font-size: 0.8rem;
+    margin: 0 0 10px;
+  }
+  h1.title{
+    font-size: 2.05rem;
+    margin: 0 0 14px;
+    line-height: 1.4;
+  }
+  .doc-lede{
+    color: var(--ink-soft);
+    font-size: 1rem;
+    max-width: 62ch;
+    margin: 0 0 22px;
+  }
+  .meta-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .pill{
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-size: 0.78rem;
+    padding: 5px 12px;
+    border-radius: 999px;
+  }
+ 
+  section{ margin: 56px 0; scroll-margin-top: 24px; }
+  section > h2{
+    font-size: 1.4rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  section > h2 .sec-num{
+    color: var(--accent);
+    font-size: 0.95rem;
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 500;
+  }
+  .sec-intro{ color: var(--ink-soft); margin: 0 0 22px; max-width: 66ch; }
+ 
+  h3{ font-size: 1.05rem; margin: 30px 0 10px; }
+  p{ margin: 0 0 14px; max-width: 68ch; }
+  ul, ol{ margin: 0 0 16px; padding-left: 1.3em; max-width: 66ch; }
+  li{ margin-bottom: 6px; }
+ 
+  /* ---------- Cards / panels ---------- */
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin: 18px 0;
+  }
+  .panel h4{
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    font-family: "Noto Sans JP", sans-serif;
+    font-weight: 600;
+  }
+ 
+  .note{
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 14px 18px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 18px 0;
+    max-width: 66ch;
+  }
+  .warn{
+    border-left: 3px solid var(--warn);
+    background: var(--warn-soft);
+    padding: 14px 18px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 18px 0;
+    max-width: 66ch;
+  }
+  .warn strong, .note strong{ display:block; font-size: 0.82rem; margin-bottom: 4px; }
+  .note strong{ color: var(--accent-deep); }
+  .warn strong{ color: var(--warn); }
+ 
+  /* ---------- Flow steps ---------- */
+  .flow{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: stretch;
+    margin: 24px 0 8px;
+  }
+  .flow-step{
+    flex: 1 1 150px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    position: relative;
+  }
+  .flow-step .fs-num{
+    font-family: "JetBrains Mono", monospace;
+    color: var(--accent);
+    font-size: 0.78rem;
+  }
+  .flow-step .fs-title{ font-weight: 600; margin: 6px 0 4px; font-size: 0.92rem; }
+  .flow-step .fs-desc{ color: var(--ink-soft); font-size: 0.82rem; margin: 0; }
+  .flow-arrow{
+    display: flex;
+    align-items: center;
+    color: var(--ink-soft);
+    font-size: 1.1rem;
+    padding: 0 2px;
+  }
+  @media (max-width: 820px){ .flow-arrow{ display:none; } }
+ 
+  /* ---------- Tables ---------- */
+  table{
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0 22px;
+    font-size: 0.88rem;
+  }
+  caption{ text-align:left; font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 6px; }
+  th, td{
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  thead th{
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 0.78rem;
+    border-bottom: 1px solid var(--ink);
+  }
+  tbody tr:hover{ background: #FBFCFD; }
+  td.req{ color: var(--warn); font-size: 0.8rem; white-space: nowrap; }
+  td.opt{ color: var(--ink-soft); font-size: 0.8rem; white-space: nowrap; }
+ 
+  /* ---------- Code ---------- */
+  pre{
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 16px 18px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    margin: 12px 0 20px;
+  }
+  code.inline{
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+ 
+  /* ---------- Page-detail blocks ---------- */
+  .page-block{
+    border-top: 1px solid var(--line);
+    padding-top: 28px;
+    margin-top: 28px;
+  }
+  .page-block:first-of-type{ border-top: none; padding-top: 0; margin-top: 0; }
+  .page-head{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .page-icon{
+    width: 34px; height: 34px;
+    border-radius: var(--radius);
+    background: var(--accent-deep);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .page-title{ font-size: 1.1rem; margin: 0; font-weight: 600; font-family: "Noto Sans JP", sans-serif; }
+  .page-sub{ color: var(--ink-soft); font-size: 0.84rem; margin: 2px 0 0; }
+  .page-body{ margin-top: 14px; }
+ 
+  .step-list{ counter-reset: step; list-style: none; padding: 0; margin: 14px 0; }
+  .step-list li{
+    counter-increment: step;
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 10px;
+    max-width: 64ch;
+  }
+  .step-list li::before{
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 1px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-size: 0.72rem;
+    font-family: "JetBrains Mono", monospace;
+    display: flex; align-items: center; justify-content: center;
+  }
+ 
+  footer{
+    border-top: 1px solid var(--line);
+    padding: 26px 64px 60px;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    max-width: 860px;
+  }
+ 
+  @media (max-width: 900px){
+    .shell{ grid-template-columns: 1fr; }
+    .sidebar{ position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+    main{ padding: 36px 24px 80px; }
+    footer{ padding: 24px 24px 50px; }
+  }
+ 
+  @media print{
+    .sidebar{ display:none; }
+    .shell{ grid-template-columns: 1fr; }
+  }
+ 
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+ 
+<div class="shell">
+ 
+  <nav class="sidebar" aria-label="目次">
+    <p class="brand">感度分析・期待値<br>計算ツール</p>
+    <p class="brand-sub">操作マニュアル</p>
+ 
+    <div class="nav-group">
+      <p class="nav-group-label">はじめに</p>
+      <ul class="nav-list">
+        <li><a href="#overview"><span class="nav-num">01</span>このツールについて</a></li>
+        <li><a href="#access"><span class="nav-num">02</span>アクセスとログイン</a></li>
+        <li><a href="#flow"><span class="nav-num">03</span>使い方の全体の流れ</a></li>
+      </ul>
+    </div>
+ 
+    <div class="nav-group">
+      <p class="nav-group-label">データ準備</p>
+      <ul class="nav-list">
+        <li><a href="#csv"><span class="nav-num">04</span>CSVファイルの仕様</a></li>
+      </ul>
+    </div>
+ 
+    <div class="nav-group">
+      <p class="nav-group-label">各ページの使い方</p>
+      <ul class="nav-list">
+        <li><a href="#page-model"><span class="nav-num">05</span>モデル式(樹形図)</a></li>
+        <li><a href="#page-tornado"><span class="nav-num">06</span>トルネードチャート</a></li>
+        <li><a href="#page-sensitivity"><span class="nav-num">07</span>感度分析</a></li>
+        <li><a href="#page-montecarlo"><span class="nav-num">08</span>モンテカルロ</a></li>
+        <li><a href="#page-breakeven"><span class="nav-num">09</span>損益分岐点分析</a></li>
+      </ul>
+    </div>
+ 
+    <div class="nav-group">
+      <p class="nav-group-label">運用</p>
+      <ul class="nav-list">
+        <li><a href="#pitfalls"><span class="nav-num">10</span>注意点・トラブルシューティング</a></li>
+        <li><a href="#embed"><span class="nav-num">11</span>アプリ内へのマニュアル組み込み</a></li>
+      </ul>
+    </div>
+ 
+    <div class="sidebar-footer">
+      公開先の Streamlit アプリ
+      <br>
+      <a class="app-link" href="https://studygroupday5-ydp6kuakoz5hgvgnyssebk.streamlit.app/" target="_blank" rel="noopener">アプリを開く ↗</a>
+    </div>
+  </nav>
+ 
+  <main>
+ 
+    <header class="doc-header">
+      <p class="doc-eyebrow">study_group_day5 / streamlit_app</p>
+      <h1 class="title">感度分析・期待値計算ツール<br>操作マニュアル</h1>
+      <p class="doc-lede">
+        CSVで定義した収支モデルをもとに、樹形図・トルネードチャート・感度分析・モンテカルロシミュレーション・損益分岐点分析を行うための社内向けツールです。
+        本マニュアルは、アクセス用パスワードを知っている方向けに、ツールで何ができるか・どう操作するかをまとめたものです。
+      </p>
+      <div class="meta-row">
+        <span class="pill">対象: パスワードを知っている関係者</span>
+        <span class="pill">形式: パスワード保護付き Streamlit アプリ</span>
+        <span class="pill">入力: node_id 形式の CSV 1 ファイル</span>
+      </div>
+    </header>
+ 
+    <section id="overview">
+      <h2><span class="sec-num">01</span>このツールについて</h2>
+      <p class="sec-intro">
+        「感度分析・期待値計算ツール」は、売上・原価・稼働率などの項目を四則演算で組み上げた収支モデルを CSV としてアップロードし、
+        その収支が各項目の変化にどれだけ敏感か(感度)を複数の角度から確認するための Streamlit アプリです。
+      </p>
+ 
+      <div class="panel">
+        <h4>できること</h4>
+        <ul>
+          <li>項目同士の足し算・引き算・掛け算・割り算の関係を樹形図として可視化し、収支(最終結果)を自動計算する</li>
+          <li>各項目の最悪値・最良値から、収支への影響度をトルネードチャートで比較する</li>
+          <li>収支をちょうど0にする値を逆算する「ゴールシーク」を実行する</li>
+          <li>2項目を同時に動かしたときの収支をヒートマップで確認する(感度分析)</li>
+          <li>各項目に確率分布を設定し、モンテカルロシミュレーションで収支のばらつきとリスクを試算する</li>
+          <li>各項目単独の損益分岐点(黒字と赤字の境目)と、そこまでの余裕度を一覧表示する</li>
+        </ul>
+      </div>
+ 
+      <div class="note">
+        <strong>想定する使い方</strong>
+        事業計画や設備投資などの収支モデルを組んでいる担当者が、前提条件のどこにリスクが集中しているかを説明・議論するための補助ツールです。
+        表計算ソフトでの感度分析を、ブラウザ上で素早く・繰り返し試せるようにしたものと考えると分かりやすいです。
+      </div>
+    </section>
+ 
+    <section id="access">
+      <h2><span class="sec-num">02</span>アクセスとログイン</h2>
+      <p class="sec-intro">アプリはパスワードで保護されています。URLを知っているだけでは中身は見えません。</p>
+ 
+      <ol class="step-list">
+        <li>下記URLをブラウザで開く。
+          <div class="note" style="margin-top:8px;">
+            <a href="https://studygroupday5-ydp6kuakoz5hgvgnyssebk.streamlit.app/" target="_blank" rel="noopener">https://studygroupday5-ydp6kuakoz5hgvgnyssebk.streamlit.app/</a>
+          </div>
+        </li>
+        <li>「パスワードを入力してください」という入力欄が表示されるので、共有されているパスワードを入力する。</li>
+        <li>パスワードが正しければそのままトップページが表示される。誤っている場合は「パスワードが違います」と表示されるので、入力し直す。</li>
+      </ol>
+ 
+      <div class="warn">
+        <strong>パスワードの取り扱い</strong>
+        パスワードはチャットやメールなど記録が残る場所への平文での貼り付けを避け、口頭または社内の共有方法で伝達してください。
+        パスワード自体はアプリ側の secrets(<code class="inline">app_password</code>)で管理されており、入力後はブラウザのセッション内に保持されます。
+      </div>
+    </section>
+ 
+    <section id="flow">
+      <h2><span class="sec-num">03</span>使い方の全体の流れ</h2>
+      <p class="sec-intro">ログイン後は、次の順番で進めると迷いません。CSVのアップロードだけは全ページ共通の前提条件です。</p>
+ 
+      <div class="flow">
+        <div class="flow-step">
+          <p class="fs-num">STEP 1</p>
+          <p class="fs-title">CSVを用意</p>
+          <p class="fs-desc">収支モデルを行単位で定義したCSVを作成する</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <p class="fs-num">STEP 2</p>
+          <p class="fs-title">トップページでアップロード</p>
+          <p class="fs-desc">ファイルを読み込み、全ページで使えるようにする</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <p class="fs-num">STEP 3</p>
+          <p class="fs-title">モデル式で確認</p>
+          <p class="fs-desc">樹形図と収支の計算結果が正しいかを確認する</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <p class="fs-num">STEP 4</p>
+          <p class="fs-title">各分析ページで検証</p>
+          <p class="fs-desc">トルネード・感度分析・モンテカルロ・損益分岐点を必要に応じて使う</p>
+        </div>
+      </div>
+ 
+      <div class="note">
+        <strong>ページ間のデータの引き継ぎ</strong>
+        各ページでの値の編集は「作業用コピー(working_df)」に対して行われ、ページを移動しても保持されます。
+        トップページの「データを完全リセット」ボタン、または各ページの「元の値にリセット」ボタンで、CSVの元の値に戻せます。
+      </div>
+    </section>
+ 
+    <section id="csv">
+      <h2><span class="sec-num">04</span>CSVファイルの仕様</h2>
+      <p class="sec-intro">
+        収支モデルは「ノード(項目)」の一覧として表現します。1行が1項目に対応し、<code class="inline">parent_id</code> で親子関係を、
+        <code class="inline">operator</code> で親ノードの計算方法を指定します。
+      </p>
+ 
+      <table>
+        <caption>列の仕様(◯必須・△任意)</caption>
+        <thead>
+          <tr><th>列名</th><th>内容</th><th>必須/任意</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code class="inline">node_id</code></td><td>項目を一意に識別するID</td><td class="req">◯必須</td></tr>
+          <tr><td><code class="inline">parent_id</code></td><td>親ノードのID。空欄の行がルート(収支)になる。ルートは1行のみ。</td><td class="req">◯必須</td></tr>
+          <tr><td><code class="inline">label</code></td><td>画面に表示する項目名</td><td class="req">◯必須</td></tr>
+          <tr><td><code class="inline">operator</code></td><td>中間ノード(子を持つ行)の演算子。<code class="inline">add</code> / <code class="inline">subtract</code> / <code class="inline">multiply</code> / <code class="inline">divide</code> のいずれか。末端ノードは空欄。</td><td class="opt">末端は空欄可</td></tr>
+          <tr><td><code class="inline">value</code></td><td>末端ノードの基準値。中間ノードは計算結果が自動的に入る。</td><td class="req">末端は◯必須</td></tr>
+          <tr><td><code class="inline">worst_value</code></td><td>末端ノードの最悪値(トルネード・感度分析・モンテカルロの初期範囲に使用)</td><td class="opt">△任意</td></tr>
+          <tr><td><code class="inline">best_value</code></td><td>末端ノードの最良値</td><td class="opt">△任意</td></tr>
+          <tr><td><code class="inline">unit</code></td><td>表示用の単位(円、%、件 など)</td><td class="opt">△任意</td></tr>
+          <tr><td><code class="inline">order</code></td><td>同じ親を持つ子ノードの計算順序。<code class="inline">subtract</code> / <code class="inline">divide</code> のように順序で結果が変わる演算で重要。</td><td class="opt">△任意</td></tr>
+          <tr><td><code class="inline">distribution</code></td><td>モンテカルロで使う分布。<code class="inline">normal</code> / <code class="inline">triangular</code> / <code class="inline">uniform</code> のいずれか(すべて英小文字)。</td><td class="opt">△任意</td></tr>
+          <tr><td><code class="inline">param1</code> <code class="inline">param2</code> <code class="inline">param3</code></td><td>分布のパラメータ。詳細は<a href="#page-montecarlo">モンテカルロの節</a>を参照。</td><td class="opt">△任意</td></tr>
+        </tbody>
+      </table>
+ 
+      <h3>最小構成の例</h3>
+      <p>「収支 = 売上 − 原価」という2項構成のシンプルな例です。</p>
+      <pre><code>node_id,parent_id,label,operator,value,worst_value,best_value,unit,order
+root,,収支,subtract,,,,,
+sales,root,売上,,1000,800,1300,円,1
+cost,root,原価,,600,500,750,円,2</code></pre>
+ 
+      <div class="note">
+        <strong>末端ノードと中間ノードの見分け方</strong>
+        「他の行から <code class="inline">parent_id</code> として参照されている行」が中間ノード、「参照されていない行」が末端ノードです。
+        値を直接編集できる(モデル式ページの「値の編集」など)のは末端ノードのみで、中間ノードの値は常に自動計算されます。
+      </div>
+    </section>
+ 
+    <section id="pages" aria-labelledby="pages-heading">
+      <h2 id="pages-heading"><span class="sec-num">05–09</span>各ページの使い方</h2>
+      <p class="sec-intro">左のメニュー(Streamlitのページナビゲーション)から、次の5つのページを切り替えられます。トップページでCSVを未アップロードの場合、各ページには警告が表示され先に進めません。</p>
+ 
+      <div class="page-block" id="page-model">
+        <div class="page-head">
+          <span class="page-icon">05</span>
+          <div>
+            <p class="page-title">モデル式(樹形図)</p>
+            <p class="page-sub">収支モデルの構造と計算結果を確認する、最初に見るページ</p>
+          </div>
+        </div>
+        <div class="page-body">
+          <p>アップロードしたCSVの構造をツリー図として表示し、収支(ルートノード)の計算結果を確認できます。</p>
+          <ol class="step-list">
+            <li>「値の編集」の表で、末端項目(演算子を持たない行)の <code class="inline">value</code> を書き換える。編集はその場で樹形図と収支に反映される。</li>
+            <li>ページ上部の指標で、収支(ルートノードの計算結果)を確認する。</li>
+            <li>樹形図はマウスホイールで拡大縮小、ドラッグで移動できる。項目・値・演算子がノードごとに表示される。</li>
+            <li>編集を取り消したい場合は「元の値にリセット」を押す(CSVの元の値に戻る)。</li>
+          </ol>
+          <div class="warn">
+            <strong>必須列が不足している場合</strong>
+            CSVに <code class="inline">node_id</code> / <code class="inline">parent_id</code> / <code class="inline">label</code> / <code class="inline">operator</code> / <code class="inline">value</code> のいずれかが無いと、
+            「CSVに必要な列が不足しています」というエラーが表示され、先のページに進めません。
+          </div>
+        </div>
+      </div>
+ 
+      <div class="page-block" id="page-tornado">
+        <div class="page-head">
+          <span class="page-icon">06</span>
+          <div>
+            <p class="page-title">トルネードチャート</p>
+            <p class="page-sub">各項目単独の振れ幅が収支に与える影響を比較する</p>
+          </div>
+        </div>
+        <div class="page-body">
+          <p>各末端項目を <code class="inline">worst_value</code> と <code class="inline">best_value</code> の間で1つずつ動かし、収支への影響幅を横棒グラフで比較します。棒が長い項目ほど、収支への影響が大きい項目です。</p>
+          <ol class="step-list">
+            <li>「値の編集」表で、対象項目の <code class="inline">worst_value</code> / <code class="inline">best_value</code> を調整する。</li>
+            <li>「ゴールシーク(収支を0にする)」で、対象項目と「逆算する対象(worst_value または best_value)」を選び、「ゴールシークを実行」を押すと、収支がちょうど0になる値が自動計算され、その項目に反映される。他の項目の値は変わらない。</li>
+            <li>下部のグラフで、各項目の影響幅(灰色の点線が現在の収支)を確認する。表には数値の一覧も表示される。</li>
+          </ol>
+          <div class="note">
+            <strong>対象になる項目</strong>
+            <code class="inline">worst_value</code> と <code class="inline">best_value</code> の両方が入力されている末端項目だけがグラフに表示されます。どちらかが空欄の項目は対象外です。
+          </div>
+        </div>
+      </div>
+ 
+      <div class="page-block" id="page-sensitivity">
+        <div class="page-head">
+          <span class="page-icon">07</span>
+          <div>
+            <p class="page-title">感度分析</p>
+            <p class="page-sub">2項目を同時に動かしたときの収支をヒートマップで見る</p>
+          </div>
+        </div>
+        <div class="page-body">
+          <p>横軸・縦軸に選んだ2つの項目を格子状に動かし、それぞれの組み合わせでの収支をヒートマップで表示します。赤いほど赤字、青いほど黒字です。</p>
+          <ol class="step-list">
+            <li>「横軸の項目」「縦軸の項目」をそれぞれ選ぶ(末端項目が2つ以上必要)。</li>
+            <li>「動かす範囲の設定」で、各項目のスライダー範囲を調整する。初期値は worst_value〜best_value(未設定の場合は基準値の±50%)。</li>
+            <li>「分割数(格子の細かさ)」で、何段階で計算するかを設定する(多いほど滑らかだが計算に時間がかかる)。</li>
+            <li>ヒートマップ上のセルの数値が、その組み合わせにおける収支の計算結果。</li>
+          </ol>
+        </div>
+      </div>
+ 
+      <div class="page-block" id="page-montecarlo">
+        <div class="page-head">
+          <span class="page-icon">08</span>
+          <div>
+            <p class="page-title">モンテカルロ</p>
+            <p class="page-sub">確率分布に基づき収支のばらつきとリスクを試算する</p>
+          </div>
+        </div>
+        <div class="page-body">
+          <p>各項目に確率分布を設定したうえで大量の試行を行い、収支がどのように分布するか、赤字になる確率がどれくらいかを確認します。</p>
+ 
+          <table>
+            <caption>選べる分布とパラメータの意味</caption>
+            <thead><tr><th>分布</th><th>param1</th><th>param2</th><th>param3</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">normal</code>(正規分布)</td><td>平均</td><td>標準偏差</td><td>使用しない</td></tr>
+              <tr><td><code class="inline">triangular</code>(三角分布)</td><td>最小値</td><td>最頻値</td><td>最大値</td></tr>
+              <tr><td><code class="inline">uniform</code>(一様分布)</td><td>最小値</td><td>最大値</td><td>使用しない</td></tr>
+            </tbody>
+          </table>
+ 
+          <ol class="step-list">
+            <li>「分布パラメータの設定」で、各項目のプルダウンから分布を選ぶ。<code class="inline">worst_value</code> / <code class="inline">best_value</code> の両方がある項目のみ、分布を選択できる。</li>
+            <li>分布を選ぶと param1〜3 に目安の初期値が自動的に入るので、必要に応じて調整する。</li>
+            <li>「この内容で分布設定を保存」を押して確定する。</li>
+            <li>「試行回数」を設定し、「シミュレーションを実行」を押す。</li>
+            <li>結果として、収支のヒストグラム・累積確率曲線・赤字になる確率・主要パーセンタイル(5%〜95%)が表示される。</li>
+          </ol>
+ 
+          <div class="warn">
+            <strong>分布名は英小文字で正確に</strong>
+            CSVの <code class="inline">distribution</code> 列を直接編集する場合は、<code class="inline">normal</code> / <code class="inline">triangular</code> / <code class="inline">uniform</code> と完全に一致する半角小文字で入力してください。
+            <code class="inline">Normal</code> や前後の空白付きなど、少しでも表記が異なると分布未設定として扱われ、値を変えても結果が変わらなくなります。
+            画面上のプルダウンから選ぶ場合はこの心配はありません。
+          </div>
+        </div>
+      </div>
+ 
+      <div class="page-block" id="page-breakeven">
+        <div class="page-head">
+          <span class="page-icon">09</span>
+          <div>
+            <p class="page-title">損益分岐点分析</p>
+            <p class="page-sub">各項目単独の黒字・赤字の境目と、その余裕度を一覧で見る</p>
+          </div>
+        </div>
+        <div class="page-body">
+          <p>他の項目をすべて固定したまま、対象項目だけを動かして収支がちょうど0になる値(損益分岐点)を、末端項目ごとに一覧表示します。</p>
+          <ul>
+            <li><strong>現在値・損益分岐点・差分</strong>:現在の値と分岐点、その差。</li>
+            <li><strong>安全余裕率(%)</strong>:現在値から分岐点までの変化率。0に近いほど、少しの変化で赤字転落するリスクが高い項目。</li>
+            <li>下部のグラフでは、安全余裕率が±10%以内の項目を赤色で強調表示する。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+ 
+    <section id="pitfalls">
+      <h2><span class="sec-num">10</span>注意点・トラブルシューティング</h2>
+ 
+      <table>
+        <thead><tr><th>症状</th><th>主な原因と対処</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>「ルートノード(parent_idが空の行)が見つかりません」</td>
+            <td><code class="inline">parent_id</code> が空欄の行が無いか、複数ある。収支を表す行を1行だけ空欄にする。</td>
+          </tr>
+          <tr>
+            <td>「node_id '…' がCSV内に見つかりません」</td>
+            <td><code class="inline">parent_id</code> に、実在しない <code class="inline">node_id</code> を指定している。誤字や行の削除漏れを確認する。</td>
+          </tr>
+          <tr>
+            <td>引き算・割り算の結果が意図と逆になる</td>
+            <td>同じ親を持つ子ノードの計算順序は <code class="inline">order</code> 列で決まる。<code class="inline">order</code> が無い場合はCSVの行順に依存するため、明示的に指定するのが安全。</td>
+          </tr>
+          <tr>
+            <td>モンテカルロで値を変えても結果が変わらない</td>
+            <td><code class="inline">distribution</code> の表記ゆれ(大文字・空白など)が主な原因。上の「分布名は英小文字で正確に」を参照。</td>
+          </tr>
+          <tr>
+            <td>アップロードし直しても前のデータのまま</td>
+            <td>同名・同サイズのファイルは再読み込みされない仕様。トップページの「データを完全リセット」を押してから再アップロードする。</td>
+          </tr>
+          <tr>
+            <td>感度分析ページで項目が選べない</td>
+            <td>末端項目(演算子を持たない行)が2つ以上必要。中間ノードしか無い、または末端項目が1つしか無いCSVでは選択肢が出ない。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+ 
+    <section id="embed">
+      <h2><span class="sec-num">11</span>アプリ内へのマニュアル組み込み</h2>
+      <p class="sec-intro">
+        本ファイル(HTML)は単独でも開けますが、Streamlitアプリの新しいページとして組み込み、アプリ内から直接マニュアルを確認できるようにすることもできます。
+      </p>
+ 
+      <h3>方法A: マニュアル専用ページを追加する</h3>
+      <p>
+        このHTMLファイルをリポジトリに追加し(例: <code class="inline">manual/操作マニュアル.html</code>)、<code class="inline">pages/</code> 配下に読み込み用のページを1つ作成します。
+        <code class="inline">streamlit_app.py</code> の <code class="inline">st.navigation([...])</code> にもページを追加すると、他のページと同じメニューに表示されます。
+      </p>
+      <pre><code># pages/0_使い方.py
+import streamlit as st
+import streamlit.components.v1 as components
+ 
+st.title("使い方(操作マニュアル)")
+ 
+with open("manual/操作マニュアル.html", encoding="utf-8") as f:
+    html = f.read()
+ 
+components.html(html, height=900, scrolling=True)</code></pre>
+ 
+      <div class="note">
+        <strong>ページの並び順</strong>
+        <code class="inline">streamlit_app.py</code> 内の <code class="inline">st.Page(...)</code> の並びがメニューの表示順です。マニュアルページを一番上に置きたい場合は、
+        <code class="inline">st.navigation([...])</code> のリストの先頭に追加してください。
+      </div>
+ 
+      <h3>方法B: パスワード入力前の案内として使う</h3>
+      <p>
+        パスワードを知らない人にもツールの概要だけ伝えたい場合は、本HTMLの「01 このツールについて」の内容だけを抜き出し、
+        <code class="inline">check_password()</code> が <code class="inline">False</code> を返している間(ログイン前)の画面に <code class="inline">st.markdown</code> 等で表示する方法もあります。
+      </p>
+    </section>
+ 
+  </main>
+</div>
+ 
+</body>
+</html>
