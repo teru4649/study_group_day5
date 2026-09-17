@@ -69,7 +69,7 @@ elif "df" not in st.session_state:
 # ====
 # ページ定義・ナビゲーション
 # ====
-manual_page = st.Page("pages/0_使い方.py", title="使い方", icon=":material/menu_book:")
+# manual_page = st.Page("pages/0_使い方.py", title="使い方", icon=":material/menu_book:")
 model_tree_page = st.Page("pages/1_モデル式.py", title="モデル式", icon=":material/schema:")
 tornado_page = st.Page("pages/2_トルネードチャート.py", title="トルネードチャート", icon=":material/bar_chart:")
 sensitivity_page = st.Page("pages/3_感度分析.py", title="感度分析", icon=":material/tune:")
